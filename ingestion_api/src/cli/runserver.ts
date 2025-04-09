@@ -28,7 +28,10 @@ export default async function bootstrap(
   const requestListener: Application = getRequestListener();
   const serverOptions: ServerOptions = {};
   const server: Server = new Server(serverOptions, requestListener);
-  await mongoose.connect(MONGODB_URI);
+  await mongoose
+    .connect(MONGODB_URI)
+    .then(() => console.log("MongoDB connection successful"))
+    .catch((err) => console.error("MongoDB connection error:", err));
   server.listen(port, host, (): void => {
     console.info(server.address());
   });

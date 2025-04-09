@@ -1,0 +1,61 @@
+services:
+  db:
+    container_name: Log-Ingestion-DB
+    extra_hosts:
+      - "hosts.docker.internal:host-gateway"
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    restart: always
+    volumes:
+      - ./db:/data/db
+  
+  mq:
+    container_name: Log-Ingestion-MQ
+    extra_hosts:
+      - "hosts.docker.internal:host-gateway"
+    image: redis:7.4-bookworm
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - ./mq:/data
+  
+  app:
+    build: ./ingestion_api
+    command: npm start runserver
+    container_name: Log-Ingestion-Application
+    depends_on:
+      - db
+      - mq
+    environment:
+      - MONGODB_URI=mongodb://db:27017/ingestion
+      - REDIS_HOST=mq
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    extra_hosts:
+      - "hosts.docker.internal:host-gateway"
+    image: log-ingestion:latest
+    ports:
+      - "8000:8000"
+    restart: always
+
+  worker:
+    build: ./ingestion_api
+    command: npm start worker
+    container_name: Log-Ingestion-Worker
+    depends_on:
+      - app
+    environment:
+      - MONGODB_URI=mongodb://db:27017/ingestion
+      - REDIS_HOST=mq
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    extra_hosts:
+      - "hosts.docker.internal:host-gateway"
+    image: log-ingestion:latest
+    restart: always
+  
+  # nginx:
+  #   container_name: 
+  #   image: nginx:latest
